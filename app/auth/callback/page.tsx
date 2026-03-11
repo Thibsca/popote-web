@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "../../lib/supabase-browser"
+import { createClient } from "../../../lib/supabase-browser"
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -12,11 +12,11 @@ export default function AuthCallback() {
 
     const handleAuth = async () => {
       await supabase.auth.getSession()
-      router.push("/")
+      router.replace("/")
     }
 
     handleAuth()
   }, [router])
 
-  return <p style={{padding:20}}>Connexion...</p>
+  return <p style={{ padding: 20 }}>Connexion...</p>
 }
