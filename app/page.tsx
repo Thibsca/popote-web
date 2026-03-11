@@ -243,29 +243,46 @@ export default function Home() {
 
   useEffect(() => {
     const loadData = async () => {
-      const { data: userData } = await supabase.auth.getUser()
-      const currentEmail = userData.user?.email ?? null
-      const currentUserId = userData.user?.id ?? null
+      try {
+        const url = new URL(window.location.href)
+        const code = url.searchParams.get("code")
 
-      setEmail(currentEmail)
-      setUserId(currentUserId)
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
-      let adminFlag = false
+          if (exchangeError) {
+            setMessageType("error")
+            setMessage("Erreur de connexion Google : " + exchangeError.message)
+          }
 
-      if (currentUserId) {
-        adminFlag = await loadProfile(currentUserId)
-        await loadMonthlyTotal(currentUserId)
-        await loadLatestConsumption(currentUserId)
+          url.searchParams.delete("code")
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""))
+        }
+
+        const { data: userData } = await supabase.auth.getUser()
+        const currentEmail = userData.user?.email ?? null
+        const currentUserId = userData.user?.id ?? null
+
+        setEmail(currentEmail)
+        setUserId(currentUserId)
+
+        let adminFlag = false
+
+        if (currentUserId) {
+          adminFlag = await loadProfile(currentUserId)
+          await loadMonthlyTotal(currentUserId)
+          await loadLatestConsumption(currentUserId)
+        }
+
+        await loadProducts(adminFlag)
+
+        if (currentEmail) {
+          setMessage(defaultMessage)
+          setMessageType("info")
+        }
+      } finally {
+        setLoading(false)
       }
-
-      await loadProducts(adminFlag)
-
-      if (currentEmail) {
-        setMessage(defaultMessage)
-        setMessageType("info")
-      }
-
-      setLoading(false)
     }
 
     loadData()
@@ -380,9 +397,9 @@ export default function Home() {
   }, [monthlyTotal, monthlyFee])
 
   const login = async () => {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-  })
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+    })
   }
 
   const logout = async () => {
