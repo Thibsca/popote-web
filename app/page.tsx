@@ -380,12 +380,9 @@ export default function Home() {
   }, [monthlyTotal, monthlyFee])
 
   const login = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+  })
   }
 
   const logout = async () => {
