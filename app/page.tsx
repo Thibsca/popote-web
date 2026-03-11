@@ -275,8 +275,6 @@ export default function Home() {
         const currentEmail = sessionData.session?.user?.email ?? null
         const currentUserId = sessionData.session?.user?.id ?? null
 
-        if (!isMounted) return
-
         setEmail(currentEmail)
         setUserId(currentUserId)
 
