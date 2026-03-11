@@ -242,6 +242,8 @@ export default function Home() {
   }
 
   useEffect(() => {
+    let isMounted = true
+
     const loadData = async () => {
       try {
         const url = new URL(window.location.href)
@@ -250,18 +252,21 @@ export default function Home() {
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
-          if (exchangeError) {
+          if (exchangeError && isMounted) {
             setMessageType("error")
             setMessage("Erreur de connexion Google : " + exchangeError.message)
           }
 
           url.searchParams.delete("code")
-          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""))
+          const cleanUrl = url.pathname + (url.search ? url.search : "")
+          window.history.replaceState({}, "", cleanUrl)
         }
 
-        const { data: userData } = await supabase.auth.getUser()
-        const currentEmail = userData.user?.email ?? null
-        const currentUserId = userData.user?.id ?? null
+        const { data: sessionData } = await supabase.auth.getSession()
+        const currentEmail = sessionData.session?.user?.email ?? null
+        const currentUserId = sessionData.session?.user?.id ?? null
+
+        if (!isMounted) return
 
         setEmail(currentEmail)
         setUserId(currentUserId)
@@ -280,14 +285,27 @@ export default function Home() {
           setMessage(defaultMessage)
           setMessageType("info")
         }
+      } catch (error) {
+        if (isMounted) {
+          const message =
+            error instanceof Error ? error.message : "Erreur inconnue"
+          setMessageType("error")
+          setMessage("Erreur de chargement : " + message)
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     loadData()
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return
+
       const currentEmail = session?.user?.email ?? null
       const currentUserId = session?.user?.id ?? null
 
@@ -311,10 +329,13 @@ export default function Home() {
         setLatestConsumption(null)
         setProducts([])
       }
+
+      setLoading(false)
     })
 
     return () => {
-      listener.subscription.unsubscribe()
+      isMounted = false
+      subscription.unsubscribe()
     }
   }, [])
 
